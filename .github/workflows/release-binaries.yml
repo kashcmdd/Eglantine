@@ -76,29 +76,19 @@ jobs:
       SCCACHE_DIR: ${{ github.workspace }}/.sccache
     strategy:
       fail-fast: false
+      # Windows only: this fork ships nx2 builds to a Windows host. The Linux and macOS jobs
+      # added ~25 minutes of wall time that Publish release then had to wait for after the
+      # Windows zips were already built, and one ARM64 warning was enough to skip the release.
+      # Restore the other platforms here if a Linux or macOS binary is ever needed.
       matrix:
         include:
-          - platform: linux-x86_64
-            runner: ubuntu-24.04
-          - platform: macos-arm64
-            runner: macos-15
-          # The two -pgo builds are the same programs compiled by clang against Eden's periodically
-          # updated profile (https://github.com/Eden-CI/PGO). Windows uses MSYS2's MinGW clang like
-          # Eden does; MSVC cannot read an LLVM .profdata file.
-          - platform: linux-x86_64-pgo
-            runner: ubuntu-24.04
-            pgo: true
           - platform: windows-x86_64
             runner: windows-2022
           - platform: windows-x86_64-pgo
             runner: windows-2022
             pgo: true
             mingw: true
-          - platform: linux-aarch64
-            runner: ubuntu-24.04-arm
-          - platform: linux-aarch64-pgo
-            runner: ubuntu-24.04-arm
-            pgo: true
+
 
     steps:
       - name: Check out source
