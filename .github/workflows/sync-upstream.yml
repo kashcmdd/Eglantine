@@ -1,0 +1,37 @@
+name: sync-upstream
+
+# Keeps this fork's nx2 branch current with zortos293/Eglantine:nx2, so a build
+# here always carries upstream's latest changes plus whatever is committed on
+# top of them.
+#
+# Add a SYNC_TOKEN secret (classic PAT, "repo" scope) for the merge to trigger
+# the release-binaries workflow; a merge made with the default GITHUB_TOKEN
+# updates the branch but GitHub suppresses the resulting workflow run.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Merge upstream nx2
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          upstream_branch="nx2"
+          before="$(gh api "repos/${{ github.repository }}/commits/${upstream_branch}" --jq .sha)"
+          result="$(gh api -X POST "repos/${{ github.repository }}/merge-upstream" -f branch="${upstream_branch}" || echo '{"merge_type":"failed"}')"
+          echo "merge result: ${result}"
+          after="$(gh api "repos/${{ github.repository }}/commits/${upstream_branch}" --jq .sha)"
+          if [ "${before}" = "${after}" ]; then
+            echo "already up to date with upstream"
+          else
+            echo "fast-forwarded to ${after}"
+          fi
